@@ -1,0 +1,49 @@
+---
+title: "Untitled"
+author: "Chris Malec"
+date: "1/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(leaflet)
+library(dplyr)
+
+geocodeAddress <- function(address) {
+  library(RJSONIO)
+  library(httr)
+  KEY <- "FB9SgxXkdZohCrPJI0mGuEpiQIfGG5lk"
+  url <- URLencode(paste0("http://www.mapquestapi.com/geocoding/v1/address?key=",KEY,"&outFormat=json&location=",address))
+  x <- fromJSON(as.character(GET(url)),simplify=FALSE)
+  if (x$info$statuscode == "0") {
+    out <- c(as.numeric(x$results[[1]]$locations[[1]]$displayLatLng$lat),
+             as.numeric(x$results[[1]]$locations[[1]]$displayLatLng$lng))
+  } else {
+    out <- NA
+  }
+  Sys.sleep(0.1)  # API only allows 5 requests per second
+  out
+}
+
+bf <- read.delim("/Users/chrismalec/Coursera/MDBreweries.txt",sep=";",header = FALSE,col.names = c("Brewery","Address","type","membership"),stringsAsFactors = FALSE)
+
+bflatlong <- data.frame(lat="",lng="",stringsAsFactors = FALSE)
+for(i in 1:length(bf$Address)){bflatlong[i,] <- geocodeAddress(bf$Address[i])}
+bflatlong$lng <- as.numeric(bflatlong$lng)
+bflatlong$lat <- as.numeric(bflatlong$lat)
+bf <- cbind(bf,bflatlong)
+```
+## Maryland Breweries Januray 29, 2019
+
+
+
+```{r, echo=FALSE}
+my_map <- bflatlong %>% 
+  leaflet() %>% 
+  addTiles %>%
+  addCircleMarkers(data = bflatlong,
+             popup = bf$Brewery,
+             clusterOptions = markerClusterOptions())
+my_map
+```
